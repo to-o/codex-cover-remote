@@ -15,13 +15,15 @@ if ($Keystore) { $Keystore = (Resolve-Path -LiteralPath $Keystore).Path }
 $out = Join-Path $PSScriptRoot 'out'
 $classes = Join-Path $out 'classes'
 $dex = Join-Path $out 'dex'
+if (Test-Path $classes) { Remove-Item -Recurse -Force $classes }
+if (Test-Path $dex) { Remove-Item -Recurse -Force $dex }
 New-Item -ItemType Directory -Force -Path $classes, $dex | Out-Null
 $source = Join-Path $PSScriptRoot 'android'
 $unsigned = Join-Path $out 'unsigned.apk'
 $aligned = Join-Path $out 'codex-cover-unsigned.apk'
 $signed = Join-Path $out 'codex-cover.apk'
 
-& "$JdkBin/javac.exe" -encoding UTF-8 --release 8 -cp $AndroidJar -d $classes "$source/src/local/codex/cover/MainActivity.java"
+& "$JdkBin/javac.exe" -encoding UTF-8 --release 8 -cp $AndroidJar -d $classes (Get-ChildItem "$source/src" -Recurse -Filter '*.java').FullName
 & "$JdkBin/java.exe" -cp "$BuildTools/lib/d8.jar" com.android.tools.r8.D8 --lib $AndroidJar --min-api 34 --output $dex (Get-ChildItem $classes -Recurse -Filter '*.class').FullName
 & "$BuildTools/aapt.exe" package -f -M "$source/AndroidManifest.xml" -S "$source/res" -I $AndroidJar -F $unsigned
 Push-Location $dex

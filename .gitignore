@@ -12,4 +12,6 @@ auth.json
 codex-pairing.json
 codex-control-*.json
 codex-remote-status.json
+codex-voice-bridge.json
+codex-voice-bridge.tmp
 *.log

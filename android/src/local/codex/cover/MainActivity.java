@@ -100,7 +100,7 @@ public final class MainActivity extends Activity {
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER_VERTICAL);
-        body.setPadding(dp(18), dp(12), dp(18), dp(12));
+        body.setPadding(dp(18), dp(8), dp(18), dp(8));
         body.setBackgroundColor(0xFF0E1724);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.setFillViewport(true);
@@ -124,7 +124,7 @@ public final class MainActivity extends Activity {
         panel.setStroke(dp(1), 0xFF304657);
         card.setBackground(panel);
         LinearLayout.LayoutParams cardSize = new LinearLayout.LayoutParams(-1, -2);
-        cardSize.setMargins(0, dp(10), 0, dp(10));
+        cardSize.setMargins(0, dp(8), 0, dp(8));
         body.addView(card, cardSize);
 
         service = new TextView(this);
@@ -168,6 +168,12 @@ public final class MainActivity extends Activity {
         actions.addView(check, checkSize);
         actions.addView(retry, new LinearLayout.LayoutParams(0, dp(48), 1));
         retry.setVisibility(android.view.View.GONE);
+
+        Button voice = createButton("实时语音", "status-json", 0xFF315C79);
+        voice.setOnClickListener(view -> startActivity(new Intent(this, VoiceActivity.class)));
+        LinearLayout.LayoutParams voiceSize = new LinearLayout.LayoutParams(-1, dp(44));
+        voiceSize.setMargins(0, dp(8), 0, 0);
+        body.addView(voice, voiceSize);
 
     }
 

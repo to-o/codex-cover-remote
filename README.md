@@ -2,6 +2,27 @@
 
 在 Samsung Galaxy Z Flip 的外屏上开启、关闭及检查 Termux 中的 Codex 远程服务。界面显示本地服务状态、Codex 连接状态码、状态变更时间和上次确认时间。异常时可以检查 FlClash 代理和 OpenAI 接口，也可以让当前进程重试连接。
 
+当前版本：`1.0.0-live`。完整说明见 [构建与部署](docs/deployment.md)、[架构与接口](docs/architecture.md) 和 [实机验证记录](docs/validation.md)。
+
+## 外屏实时语音
+
+控制页的「实时语音」打开独立语音页面。允许麦克风和 Termux 命令权限后，点击「开始语音」即可连续交谈、听取回复和查看字幕。支持麦克风开关、结束语音和任务权限确认；离开语音页面会停止录音。返回页面后可以继续当前语音任务。
+
+语音通过 Codex app-server 的实验性 `thread/realtime/start`、V3 和 WebRTC 使用当前 Codex 登录。本设备的 Codex 0.165.0 / ChatGPT Plus 登录已通过 SDP、双向音频、字幕和麦克风释放的实机验证。账号和服务端开放情况仍可能不同；默认 WebSocket 语音路径要求 API key，不能替代这里的 WebRTC 路径。
+
+安装 `termux/bin/codex-voice-start`、`codex-voice-bridge.py`、`codex-voice.html` 到 Termux 的 `~/bin/`。脚本设为可执行，HTML 仅需可读。语音桥只监听随机的 `127.0.0.1` 端口，每次启动生成本地访问令牌，经 Termux 回调交给应用。令牌不放入 APK 或仓库。桥接服务在五分钟无请求且没有执行中的任务时退出，失去页面心跳三十秒后关闭语音。麦克风音频使用 WebRTC 直接传到语音服务。
+
+第一版会新建一个名为「外屏实时语音」的 Codex 任务，工作目录为 `/root/android`，使用本设备所需的完整文件访问及 `on-request` 审批策略。它不接管原来远程服务正在执行的任务。语音使用实验接口，升级 Codex 后应重新验证协议。
+
+Android 最低版本统一为 API 34。Linux/本机构建可安装 JDK 21、aapt、zipalign、apksigner，然后执行：
+
+```sh
+python3 build-linux.py --android-jar /path/android.jar --r8-jar /path/r8.jar \
+  --keystore /private/codex-cover.p12 --password-file /private/password
+```
+
+密钥和密码文件应保存在仓库外并仅允许当前用户读取。更换签名需要卸载旧 APK 后重装；此操作不影响 Termux 中的登录资料。
+
 ## 源码和构建
 
 `android/` 保存 Android Java 源码、清单和图标。`termux/` 保存开关、代理诊断和后台服务脚本。Windows 端构建需要 PowerShell 7.4、JDK 17、Android SDK Platform 34 和 Build Tools 34。

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Codex 实时语音</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0e1724;color:#edf5fa;font:15px system-ui,sans-serif;padding:14px 18px 26px}h1{font-size:24px;margin:0 0 12px}.card{background:#192838;border:1px solid #304657;border-radius:16px;padding:13px;margin-bottom:12px}#state{font-size:17px;color:#9ae2be;line-height:1.5}#hint{color:#adbfce;font-size:13px;margin-top:5px;line-height:1.5}.actions{display:flex;gap:8px;margin-bottom:10px}button{border:0;border-radius:13px;min-height:48px;padding:9px 12px;font:inherit;color:white;background:#2b4054;flex:1}button:disabled{opacity:.45}#start{background:#296959}#stop{background:#76413c}#transcript{font-size:14px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;max-height:37vh;overflow:auto}#approval{display:none}#approvalText{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:160px;overflow:auto}.role{color:#96c7ed;font-size:12px}.line{margin-bottom:9px}#task{font-size:12px;color:#adbfce;margin:8px 0}#play{display:none}audio{display:none}
+</style>
+<h1>Codex 实时语音</h1>
+<div class="card"><div id="state">准备就绪</div><div id="hint">使用当前 Codex 登录。开始后可直接说话，结束时释放麦克风。</div></div>
+<div class="actions"><button id="start">开始语音</button><button id="stop" disabled>结束</button></div>
+<div class="actions"><button id="mute" disabled>关闭麦克风</button><button id="play">播放声音</button></div>
+<div id="approval" class="card"><div>Codex 请求权限</div><p id="approvalText"></p><div class="actions"><button id="allow">允许本次</button><button id="deny">拒绝</button></div></div>
+<div id="task"></div><div id="transcript" class="card">语音内容会显示在这里。</div>
+<audio id="speaker" autoplay playsinline></audio>
+<script>
+'use strict';
+const token=location.hash.slice(1);history.replaceState(null,'',location.pathname);
+const $=id=>document.getElementById(id);
+let pc=null,mic=null,pollTimer=null,cursor=0,starting=false,epoch=0,muted=false,approvalId=null,utterance=null,utteranceRole='',taskText='';
+async function api(path,data={},timeout=60000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+ try{const response=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(data),signal:controller.signal});
+ const value=await response.json();if(!response.ok)throw Error(value.error||'语音服务请求失败');return value;}finally{clearTimeout(timer);}
+}
+function status(text,error=false){$('state').textContent=text;$('state').style.color=error?'#ffaaa5':'#9ae2be';}
+function transcript(role,text,done=false){
+ if(!text)return;
+ if(!utterance||utteranceRole!==role){
+  if(!$('transcript').querySelector('.line'))$('transcript').textContent='';
+  const line=document.createElement('div');line.className='line';
+  const label=document.createElement('div');label.className='role';label.textContent=role==='user'?'你':'Codex';line.append(label);
+  utterance=document.createElement('span');line.append(utterance);$('transcript').append(line);utteranceRole=role;
+  while($('transcript').children.length>24)$('transcript').firstChild.remove();
+ }
+ if(done){utterance.textContent=text;utterance=null;utteranceRole='';}else utterance.textContent+=text;
+ $('transcript').scrollTop=$('transcript').scrollHeight;
+}
+function cleanMedia(){
+ if(mic)mic.getTracks().forEach(track=>track.stop());mic=null;
+ if(pc){pc.onconnectionstatechange=null;pc.close();pc=null;}
+ $('speaker').srcObject=null;clearTimeout(pollTimer);pollTimer=null;
+ $('mute').disabled=true;$('stop').disabled=true;$('start').disabled=false;$('start').textContent='继续语音';
+ $('play').style.display='none';$('approval').style.display='none';approvalId=null;muted=false;$('mute').textContent='关闭麦克风';
+}
+async function stopVoice(text='语音已结束'){
+ ++epoch;starting=false;cleanMedia();status(text);try{await api('stop',{},12000);}catch(error){status(text+' · '+error.message,true);}
+}
+async function poll(current){
+ if(current!==epoch||!pc)return;
+ try{const result=await api('events',{since:cursor},8000);cursor=result.cursor;
+  for(const event of result.events){
+   if(event.kind==='transcript')transcript(event.role,event.delta);
+   else if(event.kind==='transcriptDone')transcript(event.role,event.text,true);
+   else if(event.kind==='task'){taskText=(taskText+event.delta).slice(-300);$('task').textContent=taskText;}
+   else if(event.kind==='status'){$('task').textContent=event.text;taskText='';}
+   else if(event.kind==='approval'){approvalId=event.id;$('approvalText').textContent=event.text;$('approval').style.display='block';}
+   else if(event.kind==='error'||event.kind==='closed'){await stopVoice(event.text||'连接已结束');return;}
+  }
+ }catch(error){await stopVoice('连接中断：'+error.message);return;}
+ if(current===epoch&&pc)pollTimer=setTimeout(()=>poll(current),500);
+}
+async function startVoice(){
+ if(starting||pc)return;starting=true;const current=++epoch;
+ $('start').disabled=true;$('stop').disabled=false;status('正在准备麦克风…');
+ try{
+  const acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  if(current!==epoch){acquired.getTracks().forEach(t=>t.stop());return;}mic=acquired;
+  pc=new RTCPeerConnection({iceServers:[]});const connection=pc;
+  mic.getTracks().forEach(track=>connection.addTrack(track,mic));
+  connection.createDataChannel('oai-events');
+  connection.ontrack=event=>{$('speaker').srcObject=event.streams[0]||new MediaStream([event.track]);$('speaker').play().catch(()=>$('play').style.display='block');};
+  connection.onconnectionstatechange=()=>{
+   if(connection!==pc)return;
+   if(connection.connectionState==='connected'){status('已连接 · 可以说话');$('hint').textContent='可以连续交谈，Codex 工作时也能补充要求。';$('mute').disabled=false;}
+   else if(connection.connectionState==='failed')stopVoice('语音网络连接失败，请重试');
+  };
+  status('正在连接 Codex Live…');
+  await connection.setLocalDescription(await connection.createOffer());
+  await new Promise(resolve=>{
+   if(connection.iceGatheringState==='complete')return resolve();
+   const timer=setTimeout(resolve,1800);
+   connection.addEventListener('icegatheringstatechange',()=>{if(connection.iceGatheringState==='complete'){clearTimeout(timer);resolve();}});
+  });
+  // Start at the current event cursor so a previous call's close cannot end this one.
+  cursor=(await api('events',{since:0})).cursor;
+  const result=await api('start',{sdp:connection.localDescription.sdp});
+  if(current!==epoch){await api('stop');return;}
+  await connection.setRemoteDescription({type:'answer',sdp:result.sdp});
+  poll(current);starting=false;
+  setTimeout(()=>{if(current===epoch&&pc&&pc.connectionState!=='connected')stopVoice('连接超时，请检查代理和网络后重试');},25000);
+ }catch(error){if(current===epoch){await stopVoice(error.name==='NotAllowedError'?'需要麦克风权限，请返回后重试':'连接失败：'+error.message);}}
+ finally{if(current===epoch)starting=false;}
+}
+$('start').onclick=startVoice;$('stop').onclick=()=>stopVoice();
+$('mute').onclick=()=>{muted=!muted;if(mic)mic.getAudioTracks().forEach(t=>t.enabled=!muted);$('mute').textContent=muted?'打开麦克风':'关闭麦克风';status(muted?'麦克风已关闭':'已连接 · 可以说话');};
+$('play').onclick=()=>$('speaker').play().then(()=>$('play').style.display='none').catch(()=>status('无法播放，请检查媒体音量',true));
+async function decide(allow){const id=approvalId;if(!id)return;$('allow').disabled=$('deny').disabled=true;try{await api('approval',{id,allow});if(approvalId===id){approvalId=null;$('approval').style.display='none';}}catch(error){status(error.message,true);}finally{$('allow').disabled=$('deny').disabled=false;}}
+$('allow').onclick=()=>decide(true);$('deny').onclick=()=>decide(false);
+window.stopVoice=stopVoice;
+addEventListener('pagehide',()=>{cleanMedia();fetch('/api/stop',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:'{}',keepalive:true}).catch(()=>{});});
+</script>
+</html>
