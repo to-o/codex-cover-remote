@@ -58,7 +58,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           python3 release/make_release.py --tag "$TAG" --apk out/codex-cover.apk --output out
-          sha256sum out/codex-cover.apk out/termux-scripts.zip out/manifest.json > out/SHA256SUMS
+          (cd out && sha256sum codex-cover.apk termux-scripts.zip manifest.json > SHA256SUMS)
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
