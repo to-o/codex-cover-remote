@@ -21,7 +21,7 @@ jobs:
           java-version: '21'
       - uses: android-actions/setup-android@v4
       - name: Install Android SDK components
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager "platforms;android-34" "build-tools;35.0.0"
       - name: Static checks
         run: |
           python3 -m py_compile build-linux.py release/make_release.py termux/bin/*.py
@@ -30,7 +30,7 @@ jobs:
         run: |
           python3 build-linux.py \
             --android-jar "$ANDROID_HOME/platforms/android-34/android.jar" \
-            --r8-jar "$ANDROID_HOME/build-tools/34.0.0/lib/d8.jar"
+            --r8-jar "$ANDROID_HOME/build-tools/35.0.0/lib/d8.jar"
       - uses: actions/upload-artifact@v4
         with:
           name: codex-cover-unsigned
