@@ -23,7 +23,7 @@ jobs:
           java-version: '21'
       - uses: android-actions/setup-android@v4
       - name: Install SDK
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager "platforms;android-34" "build-tools;35.0.0"
       - name: Verify source
         run: |
           python3 -m py_compile build-linux.py release/make_release.py termux/bin/*.py
@@ -48,11 +48,11 @@ jobs:
         run: |
           python3 build-linux.py \
             --android-jar "$ANDROID_HOME/platforms/android-34/android.jar" \
-            --r8-jar "$ANDROID_HOME/build-tools/34.0.0/lib/d8.jar" \
+            --r8-jar "$ANDROID_HOME/build-tools/35.0.0/lib/d8.jar" \
             --keystore "$RUNNER_TEMP/codex-cover.p12" \
             --password-file "$RUNNER_TEMP/signing.password" \
             --alias "$KEY_ALIAS"
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose out/codex-cover.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose out/codex-cover.apk
       - name: Prepare release assets
         env:
           TAG: ${{ github.ref_name }}
