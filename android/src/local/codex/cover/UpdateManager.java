@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,8 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** User-initiated, public GitHub Release updater. Never embeds GitHub credentials. */
 public final class UpdateManager {
-    private static final String LATEST =
-            "https://api.github.com/repos/to-o/codex-cover-remote/releases/latest";
+    private static final String LATEST_MANIFEST =
+            "https://github.com/to-o/codex-cover-remote/releases/latest/download/manifest.json";
     private static final String ASSET_PREFIX =
             "https://github.com/to-o/codex-cover-remote/releases/download/";
     private static final String TERMUX_PERMISSION = "com.termux.permission.RUN_COMMAND";
@@ -60,12 +59,12 @@ public final class UpdateManager {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(15000);
-        conn.setRequestProperty("Accept", "application/vnd.github+json");
+        conn.setRequestProperty("Accept", "application/octet-stream");
         conn.setRequestProperty("User-Agent", "codex-cover-ota/1.0");
         try {
             if (conn.getResponseCode() != 200)
-                throw new Exception("GitHub HTTP " + conn.getResponseCode()
-                        + "（仓库私有或尚未创建正式 Release？）");
+                throw new Exception("GitHub Release 下载失败 HTTP " + conn.getResponseCode()
+                        + "（请检查网络或 Release 是否已公开）");
             try (InputStream in = conn.getInputStream();
                  java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
                 byte[] buf = new byte[8192];
@@ -79,34 +78,19 @@ public final class UpdateManager {
         } finally { conn.disconnect(); }
     }
 
-    private static String assetUrl(JSONArray list, String name) throws Exception {
-        for (int i = 0; i < list.length(); i++) {
-            JSONObject obj = list.getJSONObject(i);
-            if (!name.equals(obj.optString("name"))) continue;
-            String url = obj.getString("browser_download_url");
-            if (!url.startsWith(ASSET_PREFIX))
-                throw new Exception("Release 下载地址不可信");
-            return url;
-        }
-        throw new Exception("Release 缺少文件：" + name);
-    }
-
     private static Release load() throws Exception {
-        JSONObject release = new JSONObject(new String(getBytes(LATEST, 1024 * 1024), "UTF-8"));
-        if (release.optBoolean("draft") || release.optBoolean("prerelease"))
-            throw new Exception("只能安装正式版");
-        JSONArray assets = release.getJSONArray("assets");
-        JSONObject meta = new JSONObject(new String(getBytes(assetUrl(assets, "manifest.json"),
-                65536), "UTF-8"));
+        // Public release assets are not subject to GitHub's unauthenticated
+        // REST API 60 requests/hour shared egress-IP limit.
+        JSONObject meta = new JSONObject(new String(getBytes(LATEST_MANIFEST, 65536), "UTF-8"));
         Release result = new Release();
-        result.tag = release.getString("tag_name");
+        result.tag = meta.getString("tag");
         result.version = meta.getString("versionName");
         result.code = meta.getInt("versionCode");
-        result.notes = release.optString("body", "");
+        result.notes = meta.optString("notes", "");
         if (result.notes.length() > 550) result.notes = result.notes.substring(0, 550) + "…";
         if (meta.getInt("schema") != 1
                 || !"to-o/codex-cover-remote".equals(meta.getString("repository"))
-                || !result.tag.equals(meta.getString("tag"))
+                || !result.tag.matches("v[0-9]+\\.[0-9]+\\.[0-9]+")
                 || !result.tag.equals("v" + result.version)
                 || meta.getInt("minSdk") > android.os.Build.VERSION.SDK_INT)
             throw new Exception("更新元数据与当前设备不兼容");
@@ -117,8 +101,9 @@ public final class UpdateManager {
         result.size = apk.getLong("size");
         if (!result.sha256.matches("[a-f0-9]{64}") || result.size <= 0 || result.size > MAX_APK)
             throw new Exception("APK 校验信息不合法");
-        result.apkUrl = assetUrl(assets, "codex-cover.apk");
-        result.scriptsUrl = assetUrl(assets, "termux-scripts.zip");
+        // Construct asset URLs only from strictly validated tag and known filenames.
+        result.apkUrl = ASSET_PREFIX + result.tag + "/codex-cover.apk";
+        result.scriptsUrl = ASSET_PREFIX + result.tag + "/termux-scripts.zip";
         return result;
     }
 

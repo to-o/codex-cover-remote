@@ -11,7 +11,7 @@
 - `manifest.json`：版本、最低 Android SDK、文件大小和 SHA-256
 - `SHA256SUMS`：二次人工检查用的校验和
 
-公开仓库后，客户端通过公开 GitHub Releases API 检查版本，无需 PAT。
+公开仓库后，客户端通过 `https://github.com/to-o/codex-cover-remote/releases/latest/download/manifest.json` 读取公开 Release 版本清单，无需 PAT，不使用有匿名频率限制的 GitHub REST API。
 **仓库仍为私有时，未认证的外屏客户端会得到 404；这不是升级程序错误。**
 
 ## 首次配置（维护者）
