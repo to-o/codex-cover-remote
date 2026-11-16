@@ -71,23 +71,64 @@ public final class VoiceActivity extends Activity {
         registerReceiver(result, new IntentFilter(RESULT), Context.RECEIVER_NOT_EXPORTED);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(24, 24, 24, 24);
-        body.setBackgroundColor(0xFF0E1724);
+        body.setPadding(dp(17), dp(12), dp(17), dp(17));
+        body.setBackgroundColor(0xFF0A0F16);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        TextView title = new TextView(this);
+        title.setText("✦  Codex Live");
+        title.setTextColor(0xFFF0F5FB);
+        title.setTextSize(19);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+
+        Button back = new Button(this);
+        back.setAllCaps(false);
+        back.setText("返回");
+        back.setTextSize(12);
+        back.setTextColor(0xFFD5E3ED);
+        android.graphics.drawable.GradientDrawable backShape = new android.graphics.drawable.GradientDrawable();
+        backShape.setColor(0xFF1B2835);
+        backShape.setCornerRadius(dp(13));
+        back.setBackground(backShape);
+        back.setOnClickListener(view -> finish());
+        header.addView(back, new LinearLayout.LayoutParams(dp(68), dp(42)));
+        body.addView(header);
+
+        LinearLayout loader = new LinearLayout(this);
+        loader.setGravity(android.view.Gravity.CENTER);
+        loader.setOrientation(LinearLayout.VERTICAL);
+        TextView wave = new TextView(this);
+        wave.setText("◉");
+        wave.setTextSize(48);
+        wave.setTextColor(0xFF72E5B5);
+        wave.setGravity(android.view.Gravity.CENTER);
+        loader.addView(wave, new LinearLayout.LayoutParams(dp(94), dp(94)));
         message = new TextView(this);
-        message.setTextColor(0xFFEDF5FA);
-        message.setTextSize(18);
+        message.setTextColor(0xFFF0F5FB);
+        message.setTextSize(16);
+        message.setGravity(android.view.Gravity.CENTER);
         message.setText("正在准备实时语音…");
         message.setOnClickListener(view -> launch());
-        body.addView(message);
-        Button back = new Button(this);
-        back.setText("返回控制页");
-        back.setOnClickListener(view -> finish());
-        body.addView(back);
+        loader.addView(message, new LinearLayout.LayoutParams(-1, -2));
+        TextView hint = new TextView(this);
+        hint.setText("正在连接本机语音服务");
+        hint.setTextColor(0xFF91A5B8);
+        hint.setGravity(android.view.Gravity.CENTER);
+        hint.setTextSize(12);
+        hint.setPadding(0, dp(6), 0, 0);
+        loader.addView(hint);
+        body.addView(loader, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(body);
         if (checkSelfPermission(TERMUX) != PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{TERMUX, Manifest.permission.RECORD_AUDIO}, 10);
         } else launch();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void launch() {
@@ -125,7 +166,7 @@ public final class VoiceActivity extends Activity {
         WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags
                 & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
         web = new WebView(this);
-        web.setBackgroundColor(0xFF0E1724);
+        web.setBackgroundColor(0xFF0A0F16);
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
