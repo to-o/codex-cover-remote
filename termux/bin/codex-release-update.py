@@ -21,7 +21,7 @@ HOME = pathlib.Path.home()
 STATE = HOME / ".termux" / "codex-release.json"
 LOCK = HOME / ".termux" / "codex-release-update.lock"
 BIN = HOME / "bin"
-LATEST = "https://api.github.com/repos/to-o/codex-cover-remote/releases/latest"
+LATEST_MANIFEST = "https://github.com/to-o/codex-cover-remote/releases/latest/download/manifest.json"
 PREFIX_URL = "https://github.com/to-o/codex-cover-remote/releases/download/"
 SKIP = {"bin/codex"}  # local, device-specific proot wrapper
 MAX_ZIP_BYTES = 2 * 1024 * 1024
@@ -32,7 +32,7 @@ def fetch(url, max_bytes):
     if not url.startswith("https://"):
         raise ValueError("只允许 HTTPS 更新地址")
     request = urllib.request.Request(url, headers={
-        "Accept": "application/vnd.github+json",
+        "Accept": "application/octet-stream",
         "User-Agent": "codex-cover-updater/1.0",
     })
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -43,23 +43,20 @@ def fetch(url, max_bytes):
 
 
 def get_release():
-    release = json.loads(fetch(LATEST, 1024 * 1024))
-    if release.get("draft") or release.get("prerelease"):
-        raise ValueError("不安装草稿或预发布版本")
-    assets = {x["name"]: x["browser_download_url"] for x in release["assets"]}
-    for name in ("manifest.json", "termux-scripts.zip"):
-        if name not in assets or not assets[name].startswith(PREFIX_URL):
-            raise ValueError("发布文件缺失或地址不可信")
-    info = json.loads(fetch(assets["manifest.json"], 65536))
+    # Public GitHub Release assets avoid the shared-IP anonymous REST API limit.
+    info = json.loads(fetch(LATEST_MANIFEST, 65536))
+    tag = info.get("tag", "")
     if (info.get("schema") != 1 or info.get("repository") != "to-o/codex-cover-remote"
-            or info.get("tag") != release["tag_name"]
-            or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", info["tag"])):
+            or not isinstance(tag, str)
+            or not re.fullmatch(r"v[0-9]+\\.[0-9]+\\.[0-9]+", tag)
+            or info.get("versionName") != tag[1:]):
         raise ValueError("发布版本元数据不匹配")
     artifact = info["scripts"]
     if artifact["name"] != "termux-scripts.zip" or not re.fullmatch(r"[a-f0-9]{64}", artifact["sha256"]):
         raise ValueError("脚本校验信息不合法")
     if not 0 < artifact["size"] <= MAX_ZIP_BYTES:
         raise ValueError("脚本包大小不合法")
+    assets = {"termux-scripts.zip": PREFIX_URL + tag + "/termux-scripts.zip"}
     return info, assets
 
 
