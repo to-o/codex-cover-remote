@@ -1,0 +1,72 @@
+name: Publish signed release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - name: Install SDK
+        run: sdkmanager "platforms;android-34" "build-tools;35.0.0"
+      - name: Verify source
+        run: |
+          python3 -m py_compile build-linux.py release/make_release.py termux/bin/*.py
+          python3 -m unittest discover -s tests -v
+      - name: Import existing signing key
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" || { echo "Missing APK_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing APK_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing APK_KEY_ALIAS"; exit 1; }
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/codex-cover.p12"
+          printf '%s' "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/signing.password"
+      - name: Build signed APK
+        env:
+          KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
+        run: |
+          python3 build-linux.py \
+            --android-jar "$ANDROID_HOME/platforms/android-34/android.jar" \
+            --r8-jar "$ANDROID_HOME/build-tools/35.0.0/lib/d8.jar" \
+            --keystore "$RUNNER_TEMP/codex-cover.p12" \
+            --password-file "$RUNNER_TEMP/signing.password" \
+            --alias "$KEY_ALIAS"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose out/codex-cover.apk
+      - name: Prepare release assets
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 release/make_release.py --tag "$TAG" --apk out/codex-cover.apk --output out
+          sha256sum out/codex-cover.apk out/termux-scripts.zip out/manifest.json > out/SHA256SUMS
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" out/codex-cover.apk out/termux-scripts.zip \
+            out/manifest.json out/SHA256SUMS \
+            --verify-tag --title "Codex Cover $TAG" --generate-notes --latest
+      - name: Wipe temporary signing files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/codex-cover.p12" "$RUNNER_TEMP/signing.password"

@@ -175,6 +175,12 @@ public final class MainActivity extends Activity {
         voiceSize.setMargins(0, dp(8), 0, 0);
         body.addView(voice, voiceSize);
 
+        Button updates = createButton("检查更新", "status-json", 0xFF31445B);
+        updates.setOnClickListener(view -> new UpdateManager(this).check());
+        LinearLayout.LayoutParams updateSize = new LinearLayout.LayoutParams(-1, dp(44));
+        updateSize.setMargins(0, dp(8), 0, 0);
+        body.addView(updates, updateSize);
+
     }
 
     @Override protected void onStart() {
