@@ -48,7 +48,7 @@ def get_release():
     tag = info.get("tag", "")
     if (info.get("schema") != 1 or info.get("repository") != "to-o/codex-cover-remote"
             or not isinstance(tag, str)
-            or not re.fullmatch(r"v[0-9]+\\.[0-9]+\\.[0-9]+", tag)
+            or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag)
             or info.get("versionName") != tag[1:]):
         raise ValueError("发布版本元数据不匹配")
     artifact = info["scripts"]
