@@ -97,89 +97,117 @@ public final class MainActivity extends Activity {
         super.onCreate(saved);
         registerReceiver(resultReceiver, new IntentFilter(RESULT), Context.RECEIVER_NOT_EXPORTED);
 
+        // Voice-first dashboard sized for the Galaxy Z Flip cover display.
+        final int bg = 0xFF0A0F16, surface = 0xFF151E29;
+        final int foreground = 0xFFF0F5FB, muted = 0xFF91A5B8, accent = 0xFF72E5B5;
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER_VERTICAL);
-        body.setPadding(dp(18), dp(8), dp(18), dp(8));
-        body.setBackgroundColor(0xFF0E1724);
+        body.setPadding(dp(14), dp(6), dp(14), dp(8));
+        body.setBackgroundColor(bg);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setBackgroundColor(0xFF0E1724);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setBackgroundColor(bg);
         scroll.addView(body);
         mainPage = scroll;
         setContentView(mainPage);
 
-        TextView title = new TextView(this);
-        title.setText("Codex 远程");
-        title.setTextSize(24);
-        title.setTextColor(Color.WHITE);
-        body.addView(title);
-
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(14), dp(10), dp(14), dp(9));
-        android.graphics.drawable.GradientDrawable panel = new android.graphics.drawable.GradientDrawable();
-        panel.setColor(0xFF192838);
-        panel.setCornerRadius(dp(16));
-        panel.setStroke(dp(1), 0xFF304657);
-        card.setBackground(panel);
-        LinearLayout.LayoutParams cardSize = new LinearLayout.LayoutParams(-1, -2);
-        cardSize.setMargins(0, dp(8), 0, dp(8));
-        body.addView(card, cardSize);
-
-        service = new TextView(this);
-        service.setText("本地服务  正在读取");
-        service.setTextSize(15);
-        service.setTextColor(0xFFDEE9F1);
-        service.setPadding(0, 0, 0, 0);
-        card.addView(service, new LinearLayout.LayoutParams(-1, -2));
-
-        status = new TextView(this);
-        status.setText("远程连接  正在读取");
-        status.setTextSize(15);
-        status.setTextColor(0xFFBFD0DF);
-        status.setGravity(Gravity.CENTER_VERTICAL);
-        status.setMinHeight(dp(36));
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView logo = label("✦", 23, accent, true);
+        logo.setGravity(Gravity.CENTER);
+        logo.setBackground(buttonShape(surface));
+        LinearLayout.LayoutParams logoSize = new LinearLayout.LayoutParams(dp(36), dp(36));
+        logoSize.setMarginEnd(dp(9));
+        header.addView(logo, logoSize);
+        LinearLayout branding = new LinearLayout(this);
+        branding.setOrientation(LinearLayout.VERTICAL);
+        branding.addView(label("Codex", 19, foreground, true));
+        TextView tagline = label("COVER CONTROL", 9, muted, false);
+        tagline.setLetterSpacing(0.14f);
+        branding.addView(tagline);
+        header.addView(branding, new LinearLayout.LayoutParams(0, -2, 1));
+        status = label("● 检查中", 12, muted, true);
+        status.setGravity(Gravity.CENTER);
+        status.setSingleLine(true);
+        status.setPadding(dp(8), dp(7), dp(8), dp(7));
+        status.setBackground(buttonShape(surface));
         status.setOnClickListener(view -> runCommand("status-json"));
-        card.addView(status, new LinearLayout.LayoutParams(-1, -2));
+        header.addView(status, new LinearLayout.LayoutParams(-2, -2));
+        body.addView(header, new LinearLayout.LayoutParams(-1, dp(39)));
 
-        detail = new TextView(this);
-        detail.setTextSize(12);
-        detail.setTextColor(0xFFA4B8C9);
-        detail.setPadding(0, 0, 0, dp(2));
-        detail.setOnClickListener(view -> runCommand("status-json"));
-        card.addView(detail, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout row = new LinearLayout(this);
-        body.addView(row, new LinearLayout.LayoutParams(-1, -2));
-        on = createButton("开启", "on", 0xFF296959);
-        off = createButton("关闭", "off", 0xFF2B4054);
-        LinearLayout.LayoutParams onSize = new LinearLayout.LayoutParams(0, dp(49), 1);
-        onSize.setMarginEnd(dp(8));
-        row.addView(on, onSize);
-        row.addView(off, new LinearLayout.LayoutParams(0, dp(49), 1));
-        LinearLayout actions = new LinearLayout(this);
-        actions.setPadding(0, dp(5), 0, 0);
-        body.addView(actions, new LinearLayout.LayoutParams(-1, -2));
-        check = createButton("检查连接", "diagnose", 0xFF233644);
-        check.setOnClickListener(view -> openDiagnostics());
-        retry = createButton("重试连接", "retry", 0xFF3F392F);
-        LinearLayout.LayoutParams checkSize = new LinearLayout.LayoutParams(0, dp(48), 1);
-        actions.addView(check, checkSize);
-        actions.addView(retry, new LinearLayout.LayoutParams(0, dp(48), 1));
-        retry.setVisibility(android.view.View.GONE);
-
-        Button voice = createButton("实时语音", "status-json", 0xFF315C79);
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setPadding(dp(12), dp(8), dp(12), dp(9));
+        hero.setBackground(panelShape(0xFF17252B, 0xFF29473E, 19));
+        LinearLayout intro = new LinearLayout(this);
+        intro.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout description = new LinearLayout(this);
+        description.setOrientation(LinearLayout.VERTICAL);
+        TextView eyebrow = label("CODEX LIVE", 10, accent, true);
+        eyebrow.setLetterSpacing(0.13f);
+        description.addView(eyebrow);
+        description.addView(label("让想法，直接开口", 16, foreground, true));
+        description.addView(label("自然对话 · 随时追问", 10, 0xFFA3B9C3, false));
+        intro.addView(description, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView orb = label("◉", 27, accent, false);
+        orb.setGravity(Gravity.CENTER);
+        orb.setBackground(panelShape(0xFF24483C, 0xFF356850, 30));
+        intro.addView(orb, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        hero.addView(intro, new LinearLayout.LayoutParams(-1, dp(51)));
+        Button voice = createButton("✦  开始语音对话", "status-json", accent);
+        voice.setTextColor(0xFF09251B);
+        voice.setTextSize(14);
+        voice.setTypeface(null, android.graphics.Typeface.BOLD);
         voice.setOnClickListener(view -> startActivity(new Intent(this, VoiceActivity.class)));
-        LinearLayout.LayoutParams voiceSize = new LinearLayout.LayoutParams(-1, dp(44));
-        voiceSize.setMargins(0, dp(8), 0, 0);
-        body.addView(voice, voiceSize);
+        LinearLayout.LayoutParams voiceSize = new LinearLayout.LayoutParams(-1, dp(40));
+        voiceSize.setMargins(0, dp(5), 0, 0);
+        hero.addView(voice, voiceSize);
+        LinearLayout.LayoutParams heroSize = new LinearLayout.LayoutParams(-1, -2);
+        heroSize.setMargins(0, dp(7), 0, dp(7));
+        body.addView(hero, heroSize);
 
-        Button updates = createButton("检查更新", "status-json", 0xFF31445B);
+        LinearLayout remote = new LinearLayout(this);
+        remote.setGravity(Gravity.CENTER_VERTICAL);
+        remote.setPadding(dp(12), dp(6), dp(10), dp(6));
+        remote.setBackground(panelShape(surface, 0xFF233344, 16));
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.addView(label("远程服务", 10, muted, false));
+        service = label("正在检查", 14, foreground, true);
+        info.addView(service);
+        detail = label("同步连接状态…", 10, muted, false);
+        detail.setSingleLine(true);
+        detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        detail.setOnClickListener(view -> runCommand("status-json"));
+        info.addView(detail);
+        remote.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
+        on = createButton("启动", "on", 0xFF2A5F50);
+        off = createButton("关闭", "off", 0xFF263443);
+        remote.addView(on, new LinearLayout.LayoutParams(dp(67), dp(39)));
+        remote.addView(off, new LinearLayout.LayoutParams(dp(67), dp(39)));
+        off.setVisibility(android.view.View.GONE);
+        body.addView(remote, new LinearLayout.LayoutParams(-1, dp(65)));
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams actionsSize = new LinearLayout.LayoutParams(-1, dp(42));
+        actionsSize.setMargins(0, dp(7), 0, 0);
+        body.addView(actions, actionsSize);
+        check = createButton("连接诊断", "diagnose", 0xFF1B2835);
+        check.setOnClickListener(view -> openDiagnostics());
+        LinearLayout.LayoutParams checkSize = new LinearLayout.LayoutParams(0, dp(42), 1f);
+        checkSize.setMarginEnd(dp(7));
+        actions.addView(check, checkSize);
+        retry = createButton("重试", "retry", 0xFF4C402D);
+        LinearLayout.LayoutParams retrySize = new LinearLayout.LayoutParams(0, dp(42), 0.75f);
+        retrySize.setMarginEnd(dp(7));
+        actions.addView(retry, retrySize);
+        retry.setVisibility(android.view.View.GONE);
+        Button updates = createButton("设置与更新", "status-json", 0xFF1B2835);
         updates.setOnClickListener(view -> new UpdateManager(this).check());
-        LinearLayout.LayoutParams updateSize = new LinearLayout.LayoutParams(-1, dp(44));
-        updateSize.setMargins(0, dp(8), 0, 0);
-        body.addView(updates, updateSize);
+        actions.addView(updates, new LinearLayout.LayoutParams(0, dp(42), 1f));
 
     }
 
@@ -201,12 +229,28 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    private TextView label(String text, int sizeSp, int color, boolean bold) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextSize(sizeSp);
+        view.setTextColor(color);
+        if (bold) view.setTypeface(null, android.graphics.Typeface.BOLD);
+        return view;
+    }
+
+    private android.graphics.drawable.GradientDrawable panelShape(int color, int stroke, int radius) {
+        android.graphics.drawable.GradientDrawable shape = buttonShape(color);
+        shape.setCornerRadius(dp(radius));
+        shape.setStroke(dp(1), stroke);
+        return shape;
+    }
+
     private Button createButton(String label, String command, int color) {
         Button button = new Button(this);
         button.setAllCaps(false);
         button.setText(label);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(15);
+        button.setTextSize(12);
         android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
         background.addState(new int[]{-android.R.attr.state_enabled}, buttonShape(0xFF23303C));
         background.addState(new int[]{}, buttonShape(color));
@@ -291,8 +335,8 @@ public final class MainActivity extends Activity {
             LinearLayout body = new LinearLayout(this);
             body.setOrientation(LinearLayout.VERTICAL);
             body.setGravity(Gravity.CENTER_VERTICAL);
-            body.setPadding(dp(18), dp(12), dp(18), dp(12));
-            body.setBackgroundColor(0xFF0E1724);
+            body.setPadding(dp(14), dp(10), dp(14), dp(10));
+            body.setBackgroundColor(0xFF0A0F16);
 
             LinearLayout header = new LinearLayout(this);
             header.setGravity(Gravity.CENTER_VERTICAL);
@@ -317,7 +361,7 @@ public final class MainActivity extends Activity {
 
             diagnosticPage = new android.widget.ScrollView(this);
             diagnosticPage.setFillViewport(true);
-            diagnosticPage.setBackgroundColor(0xFF0E1724);
+            diagnosticPage.setBackgroundColor(0xFF0A0F16);
             diagnosticPage.addView(body);
             setContentView(diagnosticPage);
         }
@@ -411,7 +455,7 @@ public final class MainActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(9), dp(12), dp(9));
         row.setMinimumHeight(dp(42));
-        row.setBackground(buttonShape(0xFF192838));
+        row.setBackground(panelShape(0xFF151E29, 0xFF233344, 14));
 
         TextView heading = new TextView(this);
         heading.setText(label);
@@ -434,7 +478,7 @@ public final class MainActivity extends Activity {
     private android.graphics.drawable.GradientDrawable buttonShape(int color) {
         android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
         shape.setColor(color);
-        shape.setCornerRadius(dp(13));
+        shape.setCornerRadius(dp(14));
         return shape;
     }
 
@@ -460,7 +504,11 @@ public final class MainActivity extends Activity {
                 case "errored": serviceLabel = "启动异常"; break;
                 default: serviceLabel = "未运行"; break;
             }
-            service.setText("本地服务  " + serviceLabel);
+            service.setText(serviceLabel);
+            boolean serviceStarted = serviceCode.equals("running") || serviceCode.equals("starting")
+                    || serviceCode.equals("restarting");
+            on.setVisibility(serviceStarted ? android.view.View.GONE : android.view.View.VISIBLE);
+            off.setVisibility(serviceStarted ? android.view.View.VISIBLE : android.view.View.GONE);
 
             String remoteLabel;
             int color;
@@ -490,16 +538,16 @@ public final class MainActivity extends Activity {
                     || remoteCode.equals("disabled") || snapshot.has("retryErrorCode"));
             retry.setVisibility(canRetry || retrying ? android.view.View.VISIBLE : android.view.View.GONE);
             LinearLayout.LayoutParams checkSize = (LinearLayout.LayoutParams) check.getLayoutParams();
-            int spacing = canRetry || retrying ? dp(8) : 0;
+            int spacing = dp(7);
             if (checkSize.getMarginEnd() != spacing) {
                 checkSize.setMarginEnd(spacing);
                 check.setLayoutParams(checkSize);
             }
             retry.setEnabled(!retrying);
-            status.setText("远程连接  " + remoteLabel + (remoteCode.isEmpty() ? "" : "   " + remoteCode));
+            status.setText("● " + remoteLabel);
             status.setTextColor(color);
 
-            String details = "状态变更 " + clock(changedAt) + "   上次确认 " + clock(confirmedAt);
+            String details = "上次确认 " + clock(confirmedAt);
             if (!snapshot.isNull("retryErrorCode")) {
                 String errorCode = snapshot.optString("retryErrorCode");
                 details += errorCode.equals("timeout") ? "  ·  重试超时" : "  ·  重试码 " + errorCode;

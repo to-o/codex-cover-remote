@@ -2,7 +2,13 @@
 
 在 Samsung Galaxy Z Flip 的外屏上开启、关闭及检查 Termux 中的 Codex 远程服务。界面显示本地服务状态、Codex 连接状态码、状态变更时间和上次确认时间。异常时可以检查 FlClash 代理和 OpenAI 接口，也可以让当前进程重试连接。
 
-代码开发版本：`1.1.1`（正式发布需创建对应 Tag；手机当前已安装版本不一定同步）。完整说明见 [构建与部署](docs/deployment.md)、[架构与接口](docs/architecture.md) 和 [实机验证记录](docs/validation.md)。
+代码开发版本：`1.2.0`（正式发布需创建对应 Tag；手机当前已安装版本不一定同步）。完整说明见 [构建与部署](docs/deployment.md)、[架构与接口](docs/architecture.md) 和 [实机验证记录](docs/validation.md)。
+
+## v1.2.0 外屏界面
+
+针对 Galaxy Z Flip5 的 748×720 外屏重新设计深色极简控制台：主界面优先呈现 Codex Live，远程服务状态与启停收纳在简洁控制卡片，连接诊断、重试和更新改为辅助入口。实时语音 WebView 使用响应式声波、双向字幕和小屏按钮布局；保留现有 WebRTC 协议、会话生命周期及权限确认逻辑。
+
+**升级须知**：GitHub Release 同时提供 Android APK 和 Termux 脚本包。先在外屏「检查更新」中安装 v1.2.0 APK，然后再次打开「设置与更新」→「更新 Termux 脚本」，才会启用新版实时语音页面。Termux 脚本升级不会强制终止运行中的远程服务；当前任务结束后重新进入语音页面。
 
 ## GitHub 自动构建与外屏 OTA
 
