@@ -16,6 +16,11 @@ p.add_argument('--alias', default='codex-cover')
 p.add_argument('--debug', action='store_true', help='Enable WebView inspection for local verification')
 args = p.parse_args()
 root = pathlib.Path(__file__).resolve().parent
+build_tools_dir = pathlib.Path(args.r8_jar).resolve().parent.parent
+def sdk_tool(name):
+    candidate = build_tools_dir / name
+    return str(candidate) if candidate.exists() else name
+
 out = root / 'out'
 out.mkdir(exist_ok=True)
 env = dict(os.environ)
@@ -41,17 +46,17 @@ with tempfile.TemporaryDirectory(prefix='codex-cover-build-') as tmp:
         debug_manifest = tmp / 'AndroidManifest.xml'
         debug_manifest.write_text(manifest.read_text().replace('<application ', '<application android:debuggable="true" ', 1))
         manifest = debug_manifest
-    run(['aapt', 'package', '-f', '-M', manifest,
+    run([sdk_tool('aapt'), 'package', '-f', '-M', manifest,
          '-S', root / 'android/res', '-I', args.android_jar, '-F', tmp / 'unsigned.apk'])
     with zipfile.ZipFile(tmp / 'unsigned.apk', 'a', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(dex / 'classes.dex', 'classes.dex')
-    run(['zipalign', '-f', '4', tmp / 'unsigned.apk', tmp / 'aligned.apk'])
+    run([sdk_tool('zipalign'), '-f', '4', tmp / 'unsigned.apk', tmp / 'aligned.apk'])
     if args.keystore:
         artifact = out / 'codex-cover.apk'
-        run(['apksigner', 'sign', '--ks', args.keystore, '--ks-key-alias', args.alias,
+        run([sdk_tool('apksigner'), 'sign', '--ks', args.keystore, '--ks-key-alias', args.alias,
              '--ks-pass', 'env:CODEX_COVER_KEY_PASSWORD', '--key-pass', 'env:CODEX_COVER_KEY_PASSWORD',
              '--out', artifact, tmp / 'aligned.apk'])
-        run(['apksigner', 'verify', '--verbose', artifact])
+        run([sdk_tool('apksigner'), 'verify', '--verbose', artifact])
     else:
         artifact = out / 'codex-cover-unsigned.apk'
         import shutil
