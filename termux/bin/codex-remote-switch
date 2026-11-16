@@ -1,0 +1,108 @@
+#!/data/data/com.termux/files/usr/bin/sh
+set -eu
+umask 077
+export PREFIX=/data/data/com.termux/files/usr
+export HOME=/data/data/com.termux/files/home
+export PATH="$PREFIX/bin:/system/bin"
+export LD_LIBRARY_PATH="$PREFIX/lib"
+export LD_PRELOAD="$PREFIX/lib/libtermux-exec-ld-preload.so"
+export TMPDIR="$PREFIX/tmp"
+
+disabled="$HOME/.termux/codex-remote.disabled"
+session=codex-remote
+status_file="$HOME/.termux/codex-remote-status.json"
+retry_request="$HOME/.termux/codex-retry.request"
+
+if [ "${1:-}" = diagnose ]; then
+    snapshot=$("$0" status-json)
+    exec python3 "$HOME/bin/codex-remote-health.py" "$snapshot"
+fi
+
+# Serialize widget clicks and the existing boot/watchdog calls.
+exec 9>"$HOME/.termux/codex-remote-switch.lock"
+flock -x 9
+
+start_remote() {
+    if ! tmux has-session -t "=$session" 2>/dev/null; then
+        termux-wake-lock 9>&- || :
+        tmux new-session -d -s "$session" "$HOME/bin/codex-remote-loop" 9>&-
+    fi
+}
+
+case "${1:-status}" in
+    on)
+        start_remote
+        rm -f "$disabled"
+        printf '%s\n' 'Codex 远程服务已启动'
+        ;;
+    off)
+        : > "$disabled"
+        if tmux has-session -t "=$session" 2>/dev/null; then
+            tmux kill-session -t "=$session"
+        fi
+        rm -f "$status_file" "$retry_request"
+        printf '%s\n' 'Codex 远程已关闭'
+        ;;
+    ensure)
+        if [ ! -e "$disabled" ]; then
+            start_remote
+        fi
+        ;;
+    status)
+        if [ -e "$disabled" ]; then
+            printf '%s\n' 'Codex 远程已关闭'
+        elif tmux has-session -t "=$session" 2>/dev/null; then
+            printf '%s\n' 'Codex 远程服务运行中'
+            if [ -f "$status_file" ]; then
+                python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("status", "unknown"))' "$status_file"
+            fi
+        else
+            printf '%s\n' 'Codex 远程服务未运行'
+        fi
+        ;;
+    retry)
+        if [ -e "$disabled" ] || ! tmux has-session -t "=$session" 2>/dev/null; then
+            printf '%s\n' '请先开启 Codex 远程服务' >&2
+            exit 3
+        fi
+        : > "$retry_request"
+        printf '%s\n' '已请求重试连接'
+        ;;
+    status-json)
+        if [ -e "$disabled" ]; then
+            service=off
+        elif tmux has-session -t "=$session" 2>/dev/null; then
+            service=running
+        else
+            service=stopped
+        fi
+        python3 - "$service" "$status_file" "$disabled" <<'PY'
+import json, os, sys
+service, status_path, disabled_path = sys.argv[1:]
+result = {"service": service, "status": None}
+if service == "running":
+    try:
+        with open(status_path) as snapshot:
+            state = json.load(snapshot)
+            snapshot_mtime = int(os.fstat(snapshot.fileno()).st_mtime)
+        result["changedAt"] = state.get("changedAt", snapshot_mtime)
+        result["confirmedAt"] = state.get("confirmedAt", snapshot_mtime)
+        result["retrying"] = state.get("retrying", False)
+        result["service"] = state.get("serviceState", service)
+        result["status"] = state.get("status")
+        for key in ("rpcErrorCode", "appServerExitCode", "retryErrorCode"):
+            if key in state:
+                result[key] = state[key]
+    except FileNotFoundError:
+        result["service"] = "starting"
+elif service == "off":
+    result["changedAt"] = int(os.stat(disabled_path).st_mtime)
+    result["status"] = "disabled"
+print(json.dumps(result))
+PY
+        ;;
+    *)
+        printf '%s\n' 'Usage: codex-remote-switch {on|off|status|status-json|ensure|diagnose|retry}' >&2
+        exit 2
+        ;;
+esac

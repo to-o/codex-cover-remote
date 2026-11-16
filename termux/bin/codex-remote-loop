@@ -1,0 +1,12 @@
+#!/data/data/com.termux/files/usr/bin/sh
+umask 077
+while :; do
+ for name in codex-remote.log codex-server-stderr.log; do
+  logfile="$HOME/.termux/$name"
+  if [ -f "$logfile" ] && [ "$(wc -c < "$logfile")" -gt 2097152 ]; then
+   mv -f "$logfile" "$logfile.1"
+  fi
+ done
+ python3 -u "$HOME/bin/codex-remote-host.py" >> "$HOME/.termux/codex-remote.log" 2>&1
+ sleep 15
+done

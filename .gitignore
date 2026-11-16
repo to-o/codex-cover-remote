@@ -1,0 +1,15 @@
+out/
+__pycache__/
+*.pyc
+*.apk
+*.idsig
+*.p12
+*.jks
+*.keystore
+*.password
+.env
+auth.json
+codex-pairing.json
+codex-control-*.json
+codex-remote-status.json
+*.log

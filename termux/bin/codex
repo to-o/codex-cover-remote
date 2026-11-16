@@ -1,0 +1,23 @@
+#!/data/data/com.termux/files/usr/bin/sh
+export PREFIX=/data/data/com.termux/files/usr
+export HOME=/data/data/com.termux/files/home
+export PATH="$PREFIX/bin:/system/bin"
+export LD_LIBRARY_PATH="$PREFIX/lib"
+export LD_PRELOAD="$PREFIX/lib/libtermux-exec-ld-preload.so"
+export TERMUX__ROOTFS_DIR=/data/data/com.termux/files
+export TMPDIR="$PREFIX/tmp"
+CODEX=/opt/codex/aarch64-unknown-linux-musl/bin/codex
+
+run_codex() {
+  if [ -n "${CODEX_FLCLASH_PROXY:-}" ]; then
+    exec "$PREFIX/bin/proot-distro" login --env "HTTPS_PROXY=$CODEX_FLCLASH_PROXY" codexdebian -- "$CODEX" "$@"
+  fi
+  exec "$PREFIX/bin/proot-distro" login codexdebian -- "$CODEX" "$@"
+}
+for arg in "$@"; do
+  case "$arg" in
+    --) break ;;
+    --no-daemon) run_codex "$@" ;;
+  esac
+done
+run_codex --no-daemon "$@"
