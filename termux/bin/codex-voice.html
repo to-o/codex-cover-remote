@@ -47,6 +47,20 @@ button:disabled{opacity:.42}
 #allow{background:#3b6454}
 #deny{background:#4d303a}
 .footnote{text-align:center;font-size:9px;color:#596b7d}
+.settings-toggle{flex:none;min-height:34px;padding:5px 10px;color:var(--accent);background:#18362c;border:1px solid #2a6049;font-size:11px}
+.preferences{position:fixed;inset:0;z-index:8;display:none;align-items:flex-end;justify-content:center;background:#05080cdb;padding:10px}
+.preferences[aria-hidden="false"]{display:flex}
+.settings-card{background:#151e29;border:1px solid #304454;border-radius:20px;padding:14px;width:100%;max-width:460px;max-height:min(88dvh,540px);overflow:auto;overscroll-behavior:contain}
+.settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.settings-header strong{font-size:17px}
+#settingsClose{flex:none;min-height:35px;width:36px;background:#233240;padding:0}
+.setting-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.setting-row label{font-size:11px;color:#9fb1c2}
+.setting-row select{width:100%;background:#243240;color:#f3f7fc;border:1px solid #3b4c5c;border-radius:11px;font:13px system-ui,sans-serif;min-height:41px;padding:7px 9px}
+.settings-note{color:#91a4b7;font-size:11px;line-height:1.55;margin:8px 0}
+#settingsStatus{color:#b1caee;font-size:11px;white-space:pre-wrap;margin:7px 0;min-height:15px}
+#settingsSave{background:var(--accent);color:#0a251d}
+#settingsReset{background:#243240}
 audio{display:none}
 @media(max-height:480px){.shell{gap:6px}.stage{min-height:102px;padding:5px 12px}.wave{height:36px}.transcript-wrap{min-height:65px}#transcript{max-height:16vh;min-height:36px}.footnote{display:none}}
 @media(prefers-reduced-motion:reduce){body.connected .wave i{animation:none!important}}
@@ -54,7 +68,20 @@ audio{display:none}
 </head>
 <body>
 <main class="shell">
- <header class="top"><div class="brand"><div class="mark">✦</div>Codex Live</div><span class="tag">实时语音</span></header>
+ <header class="top"><div class="brand"><div class="mark">✦</div>Codex Live</div><button id="settingsToggle" type="button" class="settings-toggle" aria-label="音色与模型设置">⚙ 音色与模型</button></header>
+ <section id="preferences" class="preferences" aria-hidden="true">
+  <div class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+   <div class="settings-header"><strong id="settingsTitle">语音与模型</strong><button id="settingsClose" type="button" aria-label="关闭设置">✕</button></div>
+   <div class="setting-row"><label for="voiceSelect">语音音色</label><select id="voiceSelect"><option value="">Codex 默认</option></select></div>
+   <div class="setting-row"><label for="codexModelSelect">Codex 任务模型</label><select id="codexModelSelect"><option value="">Codex 默认</option></select></div>
+   <div class="setting-row"><label for="liveModelSelect">Live 实时语音模型</label><select id="liveModelSelect">
+    <option value="">自动（推荐）</option><option value="gpt-live-1-codex">gpt-live-1-codex（兼容）</option>
+   </select></div>
+   <p class="settings-note">修改音色将在下次语音连接时生效。更换任务模型会开启新任务，不影响原 Codex 登录。</p>
+   <p id="settingsStatus" role="status" aria-live="polite"></p>
+   <div class="actions"><button type="button" id="settingsReset">恢复默认</button><button type="button" id="settingsSave">保存设置</button></div>
+  </div>
+ </section>
  <section class="stage" aria-live="polite">
   <div class="wave" aria-hidden="true"><i style="--index:0"></i><i style="--index:1"></i><i style="--index:2"></i><i style="--index:3"></i><i style="--index:4"></i><i style="--index:5"></i><i style="--index:6"></i><i style="--index:7"></i><i style="--index:8"></i><i style="--index:9"></i><i style="--index:10"></i><i style="--index:11"></i><i style="--index:12"></i><i style="--index:13"></i><i style="--index:14"></i><i style="--index:15"></i><i style="--index:16"></i><i style="--index:17"></i><i style="--index:18"></i><i style="--index:19"></i><i style="--index:20"></i><i style="--index:21"></i><i style="--index:22"></i><i style="--index:23"></i><i style="--index:24"></i><i style="--index:25"></i><i style="--index:26"></i></div>
   <div id="state">准备就绪</div>
@@ -108,6 +135,7 @@ function cleanMedia(){
  $('speaker').srcObject=null;clearTimeout(pollTimer);pollTimer=null;
  $('mute').disabled=true;$('stop').disabled=true;$('start').disabled=false;$('start').textContent='✦ 再次对话';
  $('play').style.display='none';$('approval').style.display='none';approvalId=null;muted=false;$('mute').textContent='关闭麦克风';
+ $('settingsToggle').disabled=false;
 }
 async function stopVoice(text='语音已结束'){
  ++epoch;starting=false;cleanMedia();status(text);try{await api('stop',{},12000);}catch(error){status(text+' · '+error.message,true);}
@@ -128,6 +156,7 @@ async function poll(current){
 }
 async function startVoice(){
  if(starting||pc)return;starting=true;const current=++epoch;
+ closeSettings();$('settingsToggle').disabled=true;
  $('start').disabled=true;$('stop').disabled=false;status('正在准备麦克风…');
  try{
   const acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
@@ -158,6 +187,73 @@ async function startVoice(){
  }catch(error){if(current===epoch){await stopVoice(error.name==='NotAllowedError'?'需要麦克风权限，请返回后重试':'连接失败：'+error.message);}}
  finally{if(current===epoch)starting=false;}
 }
+
+// Preferences are kept by the authenticated Termux bridge, not in WebView storage.
+let optionsAvailable=null;
+function selectOptions(id,entries,current){
+ const element=$(id),desired=current||'';
+ element.replaceChildren();
+ for(const entry of entries){
+  const item=document.createElement('option');
+  item.value=entry.id;
+  item.textContent=entry.label;
+  element.append(item);
+ }
+ if(!entries.some(item=>item.id===desired)&&desired){
+  const invalid=document.createElement('option');
+  invalid.value=desired;
+  invalid.textContent=desired+'（已保存，当前目录不可用）';
+  element.append(invalid);
+ }
+ element.value=desired;
+}
+async function openSettings(){
+ if(starting||pc)return;
+ const dialog=$('preferences');
+ dialog.setAttribute('aria-hidden','false');
+ $('settingsStatus').textContent='正在读取当前 Codex 的音色与模型列表…';
+ $('settingsSave').disabled=true;
+ try{
+  const data=await api('options',{},25000);
+  optionsAvailable=data;
+  const voices=[{id:'',label:'自动（Codex 默认音色）'},...data.voices.map(id=>({id,label:id}))];
+  const models=[{id:'',label:'自动（Codex 默认模型）'},...data.models];
+  selectOptions('voiceSelect',voices,data.settings.voice);
+  selectOptions('codexModelSelect',models,data.settings.codexModel);
+  $('liveModelSelect').value=data.settings.liveModel||'';
+  $('settingsStatus').textContent=(data.warnings||[]).join('\n')||
+    '已从当前 Codex App Server 获取选项。';
+  $('settingsSave').disabled=!!data.busy;
+ }catch(error){
+  $('settingsStatus').textContent='读取失败：'+error.message;
+ }
+}
+function closeSettings(){$('preferences').setAttribute('aria-hidden','true')}
+$('settingsToggle').onclick=openSettings;
+$('settingsClose').onclick=closeSettings;
+$('settingsReset').onclick=()=>{
+ $('voiceSelect').value='';
+ $('codexModelSelect').value='';
+ $('liveModelSelect').value='';
+ $('settingsStatus').textContent='点击保存后恢复默认设置。';
+};
+$('settingsSave').onclick=async()=>{
+ $('settingsSave').disabled=true;
+ $('settingsStatus').textContent='正在保存…';
+ try{
+  const settings={voice:$('voiceSelect').value||null,
+   codexModel:$('codexModelSelect').value||null,
+   liveModel:$('liveModelSelect').value||null};
+  const result=await api('configure',{settings},25000);
+  closeSettings();
+  $('hint').textContent=result.newThreadOnNextStart?
+    '设置已保存。切换任务模型后，下次对话将创建新任务。':
+    '设置已保存。下次开始语音时使用新设置。';
+ }catch(error){
+  $('settingsStatus').textContent='保存失败：'+error.message;
+  $('settingsSave').disabled=false;
+ }
+};
 $('start').onclick=startVoice;$('stop').onclick=()=>stopVoice();
 $('mute').onclick=()=>{muted=!muted;if(mic)mic.getAudioTracks().forEach(t=>t.enabled=!muted);$('mute').textContent=muted?'打开麦克风':'关闭麦克风';status(muted?'麦克风已关闭':'已连接 · 可以说话');};
 $('play').onclick=()=>$('speaker').play().then(()=>$('play').style.display='none').catch(()=>status('无法播放，请检查媒体音量',true));
