@@ -103,7 +103,7 @@ public final class MainActivity extends Activity {
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER_VERTICAL);
-        body.setPadding(dp(14), dp(6), dp(14), dp(8));
+        body.setPadding(dp(14), dp(6), dp(14), dp(6));
         body.setBackgroundColor(bg);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.setFillViewport(true);
@@ -115,69 +115,72 @@ public final class MainActivity extends Activity {
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView logo = label("✦", 23, accent, true);
+        TextView logo = label("✦", 25, accent, true);
         logo.setGravity(Gravity.CENTER);
         logo.setBackground(buttonShape(surface));
-        LinearLayout.LayoutParams logoSize = new LinearLayout.LayoutParams(dp(36), dp(36));
-        logoSize.setMarginEnd(dp(9));
+        LinearLayout.LayoutParams logoSize = new LinearLayout.LayoutParams(dp(42), dp(42));
+        logoSize.setMarginEnd(dp(11));
         header.addView(logo, logoSize);
         LinearLayout branding = new LinearLayout(this);
         branding.setOrientation(LinearLayout.VERTICAL);
-        branding.addView(label("Codex", 19, foreground, true));
-        TextView tagline = label("COVER CONTROL", 9, muted, false);
+        branding.addView(label("Codex", 22, foreground, true));
+        TextView tagline = label("外屏工作台", 12, muted, false);
         tagline.setLetterSpacing(0.14f);
         branding.addView(tagline);
         header.addView(branding, new LinearLayout.LayoutParams(0, -2, 1));
-        status = label("● 检查中", 12, muted, true);
+        status = label("● 检查中", 14, muted, true);
         status.setGravity(Gravity.CENTER);
         status.setSingleLine(true);
-        status.setPadding(dp(8), dp(7), dp(8), dp(7));
+        status.setPadding(dp(10), dp(7), dp(10), dp(7));
+        status.setMinHeight(dp(38));
         status.setBackground(buttonShape(surface));
         status.setOnClickListener(view -> runCommand("status-json"));
         header.addView(status, new LinearLayout.LayoutParams(-2, -2));
-        body.addView(header, new LinearLayout.LayoutParams(-1, dp(39)));
+        header.setMinimumHeight(dp(46));
+        body.addView(header, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(12), dp(8), dp(12), dp(9));
-        hero.setBackground(panelShape(0xFF17252B, 0xFF29473E, 19));
+        hero.setPadding(dp(14), dp(10), dp(14), dp(10));
+        hero.setBackground(heroShape());
         LinearLayout intro = new LinearLayout(this);
         intro.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout description = new LinearLayout(this);
         description.setOrientation(LinearLayout.VERTICAL);
-        TextView eyebrow = label("CODEX LIVE", 10, accent, true);
+        TextView eyebrow = label("CODEX LIVE", 12, accent, true);
         eyebrow.setLetterSpacing(0.13f);
         description.addView(eyebrow);
-        description.addView(label("让想法，直接开口", 16, foreground, true));
-        description.addView(label("自然对话 · 随时追问", 10, 0xFFA3B9C3, false));
+        description.addView(label("让想法，直接开口", 20, foreground, true));
+        description.addView(label("语音对话 · 随时追问", 13, 0xFFB8D1CA, false));
         intro.addView(description, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView orb = label("◉", 27, accent, false);
+        TextView orb = label("◉", 29, accent, false);
         orb.setGravity(Gravity.CENTER);
         orb.setBackground(panelShape(0xFF24483C, 0xFF356850, 30));
-        intro.addView(orb, new LinearLayout.LayoutParams(dp(46), dp(46)));
-        hero.addView(intro, new LinearLayout.LayoutParams(-1, dp(51)));
+        intro.addView(orb, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        intro.setMinimumHeight(dp(52));
+        hero.addView(intro, new LinearLayout.LayoutParams(-1, -2));
         Button voice = createButton("✦  开始语音对话", "status-json", accent);
         voice.setTextColor(0xFF09251B);
-        voice.setTextSize(14);
+        voice.setTextSize(16);
         voice.setTypeface(null, android.graphics.Typeface.BOLD);
         voice.setOnClickListener(view -> startActivity(new Intent(this, VoiceActivity.class)));
-        LinearLayout.LayoutParams voiceSize = new LinearLayout.LayoutParams(-1, dp(40));
-        voiceSize.setMargins(0, dp(5), 0, 0);
+        LinearLayout.LayoutParams voiceSize = new LinearLayout.LayoutParams(-1, dp(48));
+        voiceSize.setMargins(0, dp(6), 0, 0);
         hero.addView(voice, voiceSize);
         LinearLayout.LayoutParams heroSize = new LinearLayout.LayoutParams(-1, -2);
-        heroSize.setMargins(0, dp(7), 0, dp(7));
+        heroSize.setMargins(0, dp(6), 0, dp(6));
         body.addView(hero, heroSize);
 
         LinearLayout remote = new LinearLayout(this);
         remote.setGravity(Gravity.CENTER_VERTICAL);
-        remote.setPadding(dp(12), dp(6), dp(10), dp(6));
+        remote.setPadding(dp(13), dp(8), dp(12), dp(8));
         remote.setBackground(panelShape(surface, 0xFF233344, 16));
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
-        info.addView(label("远程服务", 10, muted, false));
-        service = label("正在检查", 14, foreground, true);
+        info.addView(label("远程服务", 12, muted, false));
+        service = label("正在检查", 17, foreground, true);
         info.addView(service);
-        detail = label("同步连接状态…", 10, muted, false);
+        detail = label("同步连接状态…", 12, muted, false);
         detail.setSingleLine(true);
         detail.setEllipsize(android.text.TextUtils.TruncateAt.END);
         detail.setOnClickListener(view -> runCommand("status-json"));
@@ -185,29 +188,30 @@ public final class MainActivity extends Activity {
         remote.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
         on = createButton("启动", "on", 0xFF2A5F50);
         off = createButton("关闭", "off", 0xFF263443);
-        remote.addView(on, new LinearLayout.LayoutParams(dp(67), dp(39)));
-        remote.addView(off, new LinearLayout.LayoutParams(dp(67), dp(39)));
+        remote.addView(on, new LinearLayout.LayoutParams(dp(74), dp(46)));
+        remote.addView(off, new LinearLayout.LayoutParams(dp(74), dp(46)));
         off.setVisibility(android.view.View.GONE);
-        body.addView(remote, new LinearLayout.LayoutParams(-1, dp(65)));
+        remote.setMinimumHeight(dp(78));
+        body.addView(remote, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams actionsSize = new LinearLayout.LayoutParams(-1, dp(42));
-        actionsSize.setMargins(0, dp(7), 0, 0);
+        LinearLayout.LayoutParams actionsSize = new LinearLayout.LayoutParams(-1, dp(48));
+        actionsSize.setMargins(0, dp(6), 0, 0);
         body.addView(actions, actionsSize);
         check = createButton("连接诊断", "diagnose", 0xFF1B2835);
         check.setOnClickListener(view -> openDiagnostics());
-        LinearLayout.LayoutParams checkSize = new LinearLayout.LayoutParams(0, dp(42), 1f);
+        LinearLayout.LayoutParams checkSize = new LinearLayout.LayoutParams(0, dp(48), 1f);
         checkSize.setMarginEnd(dp(7));
         actions.addView(check, checkSize);
         retry = createButton("重试", "retry", 0xFF4C402D);
-        LinearLayout.LayoutParams retrySize = new LinearLayout.LayoutParams(0, dp(42), 0.75f);
+        LinearLayout.LayoutParams retrySize = new LinearLayout.LayoutParams(0, dp(48), 0.75f);
         retrySize.setMarginEnd(dp(7));
         actions.addView(retry, retrySize);
         retry.setVisibility(android.view.View.GONE);
         Button updates = createButton("设置与更新", "status-json", 0xFF1B2835);
         updates.setOnClickListener(view -> new UpdateManager(this).check());
-        actions.addView(updates, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        actions.addView(updates, new LinearLayout.LayoutParams(0, dp(48), 1f));
 
     }
 
@@ -238,6 +242,17 @@ public final class MainActivity extends Activity {
         return view;
     }
 
+    // A restrained mint glow gives the primary action depth without bitmaps.
+    private android.graphics.drawable.GradientDrawable heroShape() {
+        android.graphics.drawable.GradientDrawable shape =
+                new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                        new int[]{0xFF1C4238, 0xFF17272E, 0xFF15222E});
+        shape.setCornerRadius(dp(20));
+        shape.setStroke(dp(1), 0xFF356759);
+        return shape;
+    }
+
     private android.graphics.drawable.GradientDrawable panelShape(int color, int stroke, int radius) {
         android.graphics.drawable.GradientDrawable shape = buttonShape(color);
         shape.setCornerRadius(dp(radius));
@@ -250,7 +265,7 @@ public final class MainActivity extends Activity {
         button.setAllCaps(false);
         button.setText(label);
         button.setTextColor(Color.WHITE);
-        button.setTextSize(12);
+        button.setTextSize(15);
         android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
         background.addState(new int[]{-android.R.attr.state_enabled}, buttonShape(0xFF23303C));
         background.addState(new int[]{}, buttonShape(color));
@@ -357,7 +372,7 @@ public final class MainActivity extends Activity {
 
             recheck = createButton("重新检查", "diagnose", 0xFF296959);
             recheck.setOnClickListener(view -> openDiagnostics());
-            body.addView(recheck, new LinearLayout.LayoutParams(-1, dp(46)));
+            body.addView(recheck, new LinearLayout.LayoutParams(-1, dp(50)));
 
             diagnosticPage = new android.widget.ScrollView(this);
             diagnosticPage.setFillViewport(true);
@@ -453,19 +468,19 @@ public final class MainActivity extends Activity {
     private void addDiagnosticRow(String label, String value, int color) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12), dp(9), dp(12), dp(9));
-        row.setMinimumHeight(dp(42));
+        row.setPadding(dp(13), dp(12), dp(13), dp(12));
+        row.setMinimumHeight(dp(52));
         row.setBackground(panelShape(0xFF151E29, 0xFF233344, 14));
 
         TextView heading = new TextView(this);
         heading.setText(label);
-        heading.setTextSize(14);
+        heading.setTextSize(16);
         heading.setTextColor(0xFFD7E3EE);
         row.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
 
         TextView line = new TextView(this);
         line.setText(value);
-        line.setTextSize(14);
+        line.setTextSize(15);
         line.setTextColor(color);
         line.setGravity(Gravity.END);
         line.setMaxWidth(dp(178));
