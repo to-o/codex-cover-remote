@@ -14,6 +14,10 @@ import sys
 import threading
 import time
 import urllib.request
+from codex_voice_settings import (
+    DEFAULTS, LIVE_MODELS, load as load_voice_settings,
+    save as save_voice_settings, models_from_rpc, voices_from_rpc
+)
 
 os.umask(0o077)
 STATE = pathlib.Path.home() / '.termux' / 'codex-voice-bridge.json'
@@ -30,6 +34,7 @@ class Voice:
         self.events = collections.deque(maxlen=256)
         self.sequence = 0
         self.thread_id = None
+        self.thread_model = None
         self.start_result = queue.Queue()
         self.active = False
         self.working = False
@@ -129,25 +134,86 @@ class Voice:
                     except queue.Full:
                         pass
 
+    def options(self):
+        settings = load_voice_settings()
+        voices, models, errors = [], [], []
+        try:
+            voices = voices_from_rpc(self.rpc('thread/realtime/listVoices', {}, timeout=10))
+        except (RuntimeError, queue.Empty) as exc:
+            errors.append('当前 Codex 版本无法获取语音列表：' + str(exc)[:130])
+        try:
+            models = models_from_rpc(self.rpc('model/list', {
+                'limit': 100, 'includeHidden': False}, timeout=10))
+        except (RuntimeError, queue.Empty) as exc:
+            errors.append('无法读取 Codex 模型列表：' + str(exc)[:130])
+        return {
+            'settings': settings,
+            'voices': voices,
+            'models': models,
+            'liveModels': ['gpt-live-1-codex'],
+            'busy': self.active or self.working,
+            'warnings': errors,
+        }
+
+    def configure(self, changes):
+        new_settings = dict(DEFAULTS)
+        if not isinstance(changes, dict):
+            raise ValueError('配置必须是对象')
+        # All values must pass the same structural and allowlist checks.
+        new_settings.update(changes)
+        with self.operation:
+            if self.active or self.working:
+                raise ValueError('正在语音对话或执行任务，请结束后再修改设置')
+            opts = self.options()
+            if new_settings.get('voice') not in (None, '', 'auto'):
+                if new_settings['voice'] not in opts['voices']:
+                    raise ValueError('所选音色不在 Codex V3 音色列表中')
+            if new_settings.get('codexModel') not in (None, '', 'auto'):
+                if new_settings['codexModel'] not in [x['id'] for x in opts['models']]:
+                    raise ValueError('所选 Codex 模型不在当前模型目录中')
+            previous = load_voice_settings()
+            stored = save_voice_settings(new_settings)
+            if stored['codexModel'] != previous['codexModel']:
+                # Reuse the current thread for voice-only changes. A changed
+                # coding model starts a fresh thread on the next voice call.
+                self.thread_id = None
+                self.thread_model = None
+            return {'ok': True, 'settings': stored, 'restartRequired': False,
+                    'newThreadOnNextStart': stored['codexModel'] != previous['codexModel']}
+
     def start(self, sdp):
         with self.operation:
             if self.active:
                 raise RuntimeError('已有语音连接，请先结束')
-            if not self.thread_id:
-                result = self.rpc('thread/start', {
+            settings = load_voice_settings()
+            if not self.thread_id or self.thread_model != settings['codexModel']:
+                params = {
                     'cwd': '/root/android', 'sandbox': 'danger-full-access',
                     'approvalPolicy': 'on-request',
-                    'developerInstructions': '通过手机外屏与用户实时语音交流，默认使用中文。简短说明进展，遵循用户授权和 AGENTS.md。'})
+                    'developerInstructions': '通过手机外屏与用户实时语音交流，默认使用中文。简短说明进展，遵循用户授权和 AGENTS.md。'
+                }
+                if settings['codexModel']:
+                    params['model'] = settings['codexModel']
+                result = self.rpc('thread/start', params)
                 self.thread_id = result['thread']['id']
+                self.thread_model = settings['codexModel']
                 self.rpc('thread/name/set', {'threadId': self.thread_id, 'name': '外屏实时语音'})
             while not self.start_result.empty():
                 self.start_result.get_nowait()
             self.active = True
             try:
-                self.rpc('thread/realtime/start', {'threadId': self.thread_id,
-                    'version': 'v3', 'outputModality': 'audio',
+                realtime = {
+                    'threadId': self.thread_id,
+                    'version': 'v3',
+                    'outputModality': 'audio',
                     'transport': {'type': 'webrtc', 'sdp': sdp},
-                    'prompt': '默认用中文自然交流。回答简短。执行任务前确认理解用户意图，及时说明进展。'})
+                    'prompt': '默认用中文自然交流。回答简短。执行任务前确认理解用户意图，及时说明进展。'
+                }
+                if settings['voice']:
+                    realtime['voice'] = settings['voice']
+                if settings['liveModel']:
+                    realtime['model'] = settings['liveModel']
+                self.rpc('thread/realtime/start', realtime)
                 kind, value = self.start_result.get(timeout=45)
                 if kind != 'sdp':
                     raise RuntimeError(value)
@@ -242,6 +308,12 @@ def serve():
                 voice.last_seen = time.monotonic()
                 if self.path == '/api/health':
                     result = {'ok': voice.proc.poll() is None}
+                elif self.path == '/api/options':
+                    result = voice.options()
+                elif self.path == '/api/configure':
+                    if 'settings' not in value:
+                        raise ValueError('缺少设置字段')
+                    result = voice.configure(value['settings'])
                 elif self.path == '/api/start':
                     sdp = value.get('sdp')
                     if not isinstance(sdp, str) or not sdp.startswith('v=0'):

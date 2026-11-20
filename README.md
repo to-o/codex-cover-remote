@@ -2,13 +2,25 @@
 
 在 Samsung Galaxy Z Flip 的外屏上开启、关闭及检查 Termux 中的 Codex 远程服务。界面显示本地服务状态、Codex 连接状态码、状态变更时间和上次确认时间。异常时可以检查 FlClash 代理和 OpenAI 接口，也可以让当前进程重试连接。
 
-代码开发版本：`1.2.0`（正式发布需创建对应 Tag；手机当前已安装版本不一定同步）。完整说明见 [构建与部署](docs/deployment.md)、[架构与接口](docs/architecture.md) 和 [实机验证记录](docs/validation.md)。
+代码开发版本：`1.3.0`（正式发布需创建对应 Tag；手机当前已安装版本不一定同步）。完整说明见 [构建与部署](docs/deployment.md)、[架构与接口](docs/architecture.md) 和 [实机验证记录](docs/validation.md)。
 
 ## v1.2.0 外屏界面
 
 针对 Galaxy Z Flip5 的 748×720 外屏重新设计深色极简控制台：主界面优先呈现 Codex Live，远程服务状态与启停收纳在简洁控制卡片，连接诊断、重试和更新改为辅助入口。实时语音 WebView 使用响应式声波、双向字幕和小屏按钮布局；保留现有 WebRTC 协议、会话生命周期及权限确认逻辑。
 
 **升级须知**：GitHub Release 同时提供 Android APK 和 Termux 脚本包。先在外屏「检查更新」中安装 v1.2.0 APK，然后再次打开「设置与更新」→「更新 Termux 脚本」，才会启用新版实时语音页面。Termux 脚本升级不会强制终止运行中的远程服务；当前任务结束后重新进入语音页面。
+
+## v1.3.0 音色和模型设置
+
+在外屏打开「Codex Live」页面，**未通话时**点击右上角「⚙ 音色与模型」：
+
+- **语音音色**：调用当前 Codex app-server 的实验接口 `thread/realtime/listVoices`，仅展示 V3 音色。选择后从下一次连接开始生效；默认不主动覆盖 Codex 当前声音。
+- **Codex 任务模型**：调用 `model/list` 获取当前模型目录，选择后用于下次 `thread/start.model`。变更任务模型会开启新的 Codex 任务；仅切换音色不会新建任务。模型列表并不代表账号一定具有该模型的调用权限。
+- **Live 实时模型**：推荐「自动」，可手动选择兼容候选 `gpt-live-1-codex`，通过 `thread/realtime/start.model` 在下一次语音连接时生效。不要将常规 Codex 编程模型填到 Live 模型字段。
+
+配置以权限 0600 保存在 Termux 的 `~/.termux/codex-cover-live-settings.json`，不修改当前 Codex 的全局 `config.toml`，也不包含登录令牌。音色和模型列表来自当前安装的 Codex 版本，实验接口不支持时仍可使用默认语音。
+
+**升级顺序**：先在现有 App「检查更新」安装 v1.3.0 APK，再进入「设置与更新」更新 Termux 脚本包。运行中的旧语音桥进程不会被强制终止；退出语音并让旧桥停止后，重新打开语音页才会加载新界面和设置服务。
 
 ## GitHub 自动构建与外屏 OTA
 

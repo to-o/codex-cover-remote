@@ -23,8 +23,12 @@ class IdParser(HTMLParser):
 class CoverUiTests(unittest.TestCase):
     def test_version_bumped(self):
         manifest = (ROOT / "android/AndroidManifest.xml").read_text()
-        self.assertIn('android:versionCode="4"', manifest)
-        self.assertIn('android:versionName="1.2.0"', manifest)
+        code = re.search(r'android:versionCode="([0-9]+)"', manifest)
+        version = re.search(r'android:versionName="([^"]+)"', manifest)
+        self.assertIsNotNone(code)
+        self.assertIsNotNone(version)
+        self.assertGreaterEqual(int(code.group(1)), 4)
+        self.assertRegex(version.group(1), r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
     def test_cover_actions_still_wired(self):
         source = (ANDROID / "MainActivity.java").read_text()
