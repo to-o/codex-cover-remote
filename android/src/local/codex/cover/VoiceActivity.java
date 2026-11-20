@@ -71,7 +71,7 @@ public final class VoiceActivity extends Activity {
         registerReceiver(result, new IntentFilter(RESULT), Context.RECEIVER_NOT_EXPORTED);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(17), dp(12), dp(17), dp(17));
+        body.setPadding(dp(16), dp(12), dp(16), dp(16));
         body.setBackgroundColor(0xFF0A0F16);
 
         LinearLayout header = new LinearLayout(this);
@@ -79,21 +79,21 @@ public final class VoiceActivity extends Activity {
         TextView title = new TextView(this);
         title.setText("✦  Codex Live");
         title.setTextColor(0xFFF0F5FB);
-        title.setTextSize(19);
+        title.setTextSize(22);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
         Button back = new Button(this);
         back.setAllCaps(false);
         back.setText("返回");
-        back.setTextSize(12);
+        back.setTextSize(15);
         back.setTextColor(0xFFD5E3ED);
         android.graphics.drawable.GradientDrawable backShape = new android.graphics.drawable.GradientDrawable();
         backShape.setColor(0xFF1B2835);
         backShape.setCornerRadius(dp(13));
         back.setBackground(backShape);
         back.setOnClickListener(view -> finish());
-        header.addView(back, new LinearLayout.LayoutParams(dp(68), dp(42)));
+        header.addView(back, new LinearLayout.LayoutParams(dp(78), dp(48)));
         body.addView(header);
 
         LinearLayout loader = new LinearLayout(this);
@@ -101,13 +101,13 @@ public final class VoiceActivity extends Activity {
         loader.setOrientation(LinearLayout.VERTICAL);
         TextView wave = new TextView(this);
         wave.setText("◉");
-        wave.setTextSize(48);
+        wave.setTextSize(56);
         wave.setTextColor(0xFF72E5B5);
         wave.setGravity(android.view.Gravity.CENTER);
-        loader.addView(wave, new LinearLayout.LayoutParams(dp(94), dp(94)));
+        loader.addView(wave, new LinearLayout.LayoutParams(dp(102), dp(102)));
         message = new TextView(this);
         message.setTextColor(0xFFF0F5FB);
-        message.setTextSize(16);
+        message.setTextSize(19);
         message.setGravity(android.view.Gravity.CENTER);
         message.setText("正在准备实时语音…");
         message.setOnClickListener(view -> launch());
@@ -116,8 +116,8 @@ public final class VoiceActivity extends Activity {
         hint.setText("正在连接本机语音服务");
         hint.setTextColor(0xFF91A5B8);
         hint.setGravity(android.view.Gravity.CENTER);
-        hint.setTextSize(12);
-        hint.setPadding(0, dp(6), 0, 0);
+        hint.setTextSize(14);
+        hint.setPadding(0, dp(8), 0, 0);
         loader.addView(hint);
         body.addView(loader, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(body);
@@ -168,6 +168,9 @@ public final class VoiceActivity extends Activity {
         web = new WebView(this);
         web.setBackgroundColor(0xFF0A0F16);
         web.getSettings().setJavaScriptEnabled(true);
+        // Honor Android's accessibility font scale in the embedded Live UI.
+        float fontScale = getResources().getConfiguration().fontScale;
+        web.getSettings().setTextZoom(Math.round(100f * Math.max(1f, fontScale)));
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
         web.getSettings().setSaveFormData(false);
