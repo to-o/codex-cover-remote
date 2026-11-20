@@ -136,7 +136,8 @@ public final class MainActivity extends Activity {
         status.setBackground(buttonShape(surface));
         status.setOnClickListener(view -> runCommand("status-json"));
         header.addView(status, new LinearLayout.LayoutParams(-2, -2));
-        body.addView(header, new LinearLayout.LayoutParams(-1, dp(50)));
+        header.setMinimumHeight(dp(46));
+        body.addView(header, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
@@ -156,7 +157,8 @@ public final class MainActivity extends Activity {
         orb.setGravity(Gravity.CENTER);
         orb.setBackground(panelShape(0xFF24483C, 0xFF356850, 30));
         intro.addView(orb, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        hero.addView(intro, new LinearLayout.LayoutParams(-1, dp(52)));
+        intro.setMinimumHeight(dp(52));
+        hero.addView(intro, new LinearLayout.LayoutParams(-1, -2));
         Button voice = createButton("✦  开始语音对话", "status-json", accent);
         voice.setTextColor(0xFF09251B);
         voice.setTextSize(16);
@@ -189,7 +191,8 @@ public final class MainActivity extends Activity {
         remote.addView(on, new LinearLayout.LayoutParams(dp(74), dp(46)));
         remote.addView(off, new LinearLayout.LayoutParams(dp(74), dp(46)));
         off.setVisibility(android.view.View.GONE);
-        body.addView(remote, new LinearLayout.LayoutParams(-1, dp(78)));
+        remote.setMinimumHeight(dp(78));
+        body.addView(remote, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.CENTER_VERTICAL);
